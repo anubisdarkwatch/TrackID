@@ -3,7 +3,7 @@
 #   Waveshare 2.13" e-Paper HAT V4   or   Adafruit 2.13" Monochrome E-Ink Bonnet (#4687)
 # Raspberry Pi OS Lite: 32-bit on a Zero W / WH, 32- or 64-bit on a Zero 2W.
 # Usage:  sudo bash install.sh            (asks which display)
-#         sudo bash install.sh waveshare  |  sudo bash install.sh adafruit
+#         sudo bash install.sh waveshare [V4|V3|V2]  |  sudo bash install.sh adafruit
 set -euo pipefail
 if [ "$(id -u)" -ne 0 ]; then echo "Run with sudo:  sudo bash install.sh"; exit 1; fi
 
@@ -15,13 +15,20 @@ echo "==> TrackID Ink install for $USER_NAME ($APP_DIR)"
 PANEL="${1:-}"
 if [ -z "$PANEL" ]; then
   echo "Which e-paper is on this Pi?"
-  echo "  1) Waveshare 2.13\" e-Paper HAT V4"
+  echo "  1) Waveshare 2.13\" e-Paper HAT"
   echo "  2) Adafruit 2.13\" Monochrome E-Ink Bonnet"
   read -r -p "1 or 2: " ans
   [ "$ans" = "2" ] && PANEL=adafruit || PANEL=waveshare
 fi
-case "$PANEL" in adafruit*) PANEL=adafruit ;; *) PANEL=waveshare_v4 ;; esac
-echo "==> Display: $PANEL"
+case "$PANEL" in adafruit*) PANEL=adafruit ;; *) PANEL=waveshare ;; esac
+MODEL="${2:-}"
+if [ "$PANEL" = waveshare ] && [ -z "$MODEL" ]; then
+  echo "Waveshare panel generation? (printed on the screen's ribbon/back; FPC-A002 ribbons from 2019-21 are usually V2)"
+  read -r -p "V4, V3 or V2 [Enter = V4]: " MODEL
+fi
+MODEL="$(echo "${MODEL:-V4}" | tr '[:lower:]' '[:upper:]')"
+case "$MODEL" in V2|V3|V4) ;; *) MODEL=V4 ;; esac
+echo "==> Display: $PANEL $( [ "$PANEL" = waveshare ] && echo "$MODEL")"
 
 echo "==> Packages"
 apt-get update
@@ -45,6 +52,7 @@ fi
 echo "==> Config"
 [ -f "$APP_DIR/config.ini" ] || cp "$APP_DIR/config.example.ini" "$APP_DIR/config.ini"
 sed -i "s/^panel *=.*/panel = $PANEL/" "$APP_DIR/config.ini"
+[ "$PANEL" = waveshare ] && sed -i "s/^waveshare_model *=.*/waveshare_model = $MODEL/" "$APP_DIR/config.ini"
 chown -R "$USER_NAME:$USER_NAME" "$APP_DIR"
 
 echo "==> Service"

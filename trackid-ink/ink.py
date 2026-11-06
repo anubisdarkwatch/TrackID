@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """TrackID Ink - a now-playing sign for TrackID on a 2.13" e-paper (250x122, black/white):
-the Waveshare 2.13" e-Paper HAT V4, or the Adafruit 2.13" Monochrome E-Ink Bonnet (#4687).
+the Waveshare 2.13" e-Paper HAT (V2, V3 or V4 panel), or the Adafruit 2.13" Monochrome E-Ink Bonnet (#4687).
 
 Runs on its own Pi (a Zero W / WH or Zero 2W: the e-paper HAT and the Whisplay can't share one Pi).
 Every couple of seconds it asks TrackID (http://trackid.local:8080/api/state) what's playing and redraws when
 something changes: the track and artist, the BPM, AUTO/MANUAL, the track count, and the previous track.
 
 No beat flashing: e-paper takes ~0.3 s for a partial update. Partial updates for changes, a full clean refresh
-every so often to clear ghosting, and the panel sleeps between updates.
+every so often to clear ghosting, and the panel sleeps after a quiet minute.
 
 Preview without hardware:  python3 ink.py --preview out/
 """
@@ -32,7 +32,7 @@ log = logging.getLogger("trackid-ink")
 
 DEFAULTS = {
     "trackid": {"url": "http://trackid.local:8080", "poll": "2"},
-    "display": {"panel": "waveshare_v4", "adafruit_driver": "ssd1680b", "bpm_step": "1", "bpm_min_gap": "6",
+    "display": {"panel": "waveshare", "waveshare_model": "V4", "adafruit_driver": "ssd1680b", "bpm_step": "1", "bpm_min_gap": "6",
                 "full_refresh_every": "30", "full_refresh_minutes": "15", "flip": "false"},
 }
 
@@ -163,42 +163,65 @@ def render(st, online, prev=None):
 # ================================================================== panel
 
 class Panel:
-    """Waveshare 2.13" V4 with partial updates, periodic full refresh, and sleep between updates."""
+    """Waveshare 2.13" e-Paper (V2, V3 or V4 panel) with partial updates and a periodic full refresh.
+    The panel stays awake while updates keep coming (fast partials) and sleeps after a quiet minute;
+    the first update after sleeping is a full refresh."""
 
-    def __init__(self, full_every, full_minutes, flip):
+    SLEEP_AFTER_S = 60
+
+    def __init__(self, model, full_every, full_minutes, flip):
+        import importlib
         sys.path.insert(0, APP_DIR)
-        from waveshare_epd import epd2in13_V4
-        self.epd = epd2in13_V4.EPD()
+        self.model = model if model in ("V2", "V3", "V4") else "V4"
+        self.epd = importlib.import_module(f"waveshare_epd.epd2in13_{self.model}").EPD()
         self.full_every = full_every
         self.full_s = full_minutes * 60
         self.flip = flip
         self.partials = 0
         self.last_full = 0.0
-        self.base_set = False
+        self.last_show = 0.0
+        self.awake = False
+        self.in_part_mode = False
+        log.info("Waveshare 2.13\" %s panel", self.model)
 
     def _buf(self, img):
         if self.flip:
             img = img.rotate(180)
         return self.epd.getbuffer(img)
 
+    def _init(self, partial):
+        if self.model == "V2":
+            self.epd.init(self.epd.PART_UPDATE if partial else self.epd.FULL_UPDATE)
+        elif not partial:
+            self.epd.init()
+        self.in_part_mode = partial
+
     def show(self, img):
         now = time.time()
-        if not self.base_set or self.partials >= self.full_every or now - self.last_full > self.full_s:
-            self.epd.init()
+        if not self.awake or self.partials >= self.full_every or now - self.last_full > self.full_s:
+            self._init(False)
             self.epd.displayPartBaseImage(self._buf(img))   # full refresh, also the base for partials
-            self.base_set = True
-            self.partials = 0
-            self.last_full = now
+            self.partials, self.last_full, self.awake = 0, now, True
             log.info("full refresh")
         else:
+            if self.model == "V2" and not self.in_part_mode:
+                self._init(True)
             self.epd.displayPartial(self._buf(img))
             self.partials += 1
-        self.epd.sleep()                                     # panel off between updates (no burn-in, ~0 mA)
+        self.last_show = now
+
+    def idle(self):
+        """Call regularly: puts the panel to sleep after a quiet spell."""
+        if self.awake and time.time() - self.last_show > self.SLEEP_AFTER_S:
+            self.epd.sleep()
+            self.awake = False
+            self.in_part_mode = False
 
     def clear(self):
-        self.epd.init()
+        self._init(False)
         self.epd.Clear(0xFF)
         self.epd.sleep()
+        self.awake = False
 
 
 class AdafruitPanel:
@@ -226,6 +249,9 @@ class AdafruitPanel:
     def show(self, img):
         self.epd.image(img.convert("RGB"))
         self.epd.display()
+
+    def idle(self):
+        pass
 
     def clear(self):
         from adafruit_epd.epd import Adafruit_EPD
@@ -286,7 +312,8 @@ def main():
         panel = AdafruitPanel(cfg.get("display", "adafruit_driver").strip().lower(), flip)
         bpm_gap = max(bpm_gap, 20)                           # full refreshes only: change the BPM less often
     else:
-        panel = Panel(max(5, cfg.getint("display", "full_refresh_every")),
+        panel = Panel(cfg.get("display", "waveshare_model").strip().upper(),
+                      max(5, cfg.getint("display", "full_refresh_every")),
                       max(1, cfg.getint("display", "full_refresh_minutes")), flip)
 
     running = [True]
@@ -328,6 +355,10 @@ def main():
                 shown_key = key
             except Exception:
                 log.exception("display update failed")
+        try:
+            panel.idle()
+        except Exception:
+            log.exception("panel sleep failed")
         time.sleep(poll)
     try:
         panel.clear()
