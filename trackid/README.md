@@ -62,8 +62,16 @@ For other gadgets, `http://trackid.local:8080/api/state` returns the live BPM, m
 | auto | min_level | 0.01 | what counts as "music playing" |
 | display | brightness / led / led_beat / fps | 70 / on / on / 12 | |
 | web | enabled / port | on / 8080 | LAN only, read-only |
+| conductor | url | none | Beat Hub address, e.g. `http://localhost:8090` (see below) |
 
 After editing: `sudo systemctl restart trackid`
+
+## BPM from the Beat Conductor (optional)
+With a [Beat Gateway](https://github.com/anubisdarkwatch/W10-Beat-Conductor#beat-gateway-xiao-esp32-s3--beat-hub)
+and Beat Hub running (on this Pi or another one), TrackID can take its BPM and beat from the conductor instead of
+guessing from the mic. Set `[conductor] url = http://localhost:8090` (or the other Pi's address) and restart.
+While the conductor is live, the screen shows **LINK** next to the BPM, and every logged track gets the conductor's
+BPM. When it goes quiet, the mic takes over again by itself.
 
 ## Troubleshooting
 - Logs: `journalctl -u trackid -f`

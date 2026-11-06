@@ -29,6 +29,7 @@ import time
 import wave
 from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import urllib.request
 from urllib.parse import parse_qs, urlparse
 
 import numpy as np
@@ -43,7 +44,7 @@ sys.path.insert(0, APP_DIR)
 from beat import BeatEngine, RATE  # noqa: E402
 from screens import Screens, W, H, to_rgb565, hue_rgb, GREEN, PURPLE, BLUE, RED, PINK, AMBER, CYAN  # noqa: E402
 
-VERSION = "2.0"
+VERSION = "2.1"
 RING_S = 20                 # seconds of audio kept
 DOUBLE_TAP_S = 0.35
 LONG_PRESS_S = 1.5
@@ -57,6 +58,7 @@ DEFAULT_CONFIG = {
     "display": {"brightness": "70", "led": "true", "led_beat": "true", "fps": "12"},
     "web": {"enabled": "true", "port": "8080"},
     "storage": {"data_dir": "data", "keep_clips": "false"},
+    "conductor": {"url": ""},
 }
 
 
@@ -538,6 +540,54 @@ def make_handler(app):
 
 # ================================================================== app
 
+class ConductorFeed:
+    """Live BPM + beat from a Beat Hub (the Beat Conductor's USB gateway), read from its /api/state."""
+
+    def __init__(self, url):
+        self.url = url.rstrip("/") + "/api/state"
+        self.bpm = 0.0
+        self.beat_n = 1
+        self.beat_t = 0.0            # time.time() of the hub's last beat
+        self.ok_t = 0.0
+        self.live = False
+        self.last_tb = 0.0
+
+    @property
+    def locked(self):
+        return self.live and time.time() - self.ok_t < 2.0
+
+    def start(self):
+        threading.Thread(target=self._poll, daemon=True).start()
+
+    def _poll(self):
+        while True:
+            try:
+                with urllib.request.urlopen(self.url, timeout=1.5) as r:
+                    st = json.load(r)
+                now = time.time()
+                if st.get("locked") and st.get("bpm"):
+                    self.bpm, self.beat_n = float(st["bpm"]), int(st["beat"])
+                    self.beat_t = now - st["beat_age_ms"] / 1000.0
+                    self.live, self.ok_t = True, now
+                else:
+                    self.live = False
+            except Exception:
+                self.live = False
+            time.sleep(0.5)
+
+    def tick(self, now_ms):
+        """Beat index 0..3 when a new beat has started since the last call, else None (same as BeatEngine.tick)."""
+        if not self.bpm:
+            return None
+        per = 60.0 / self.bpm
+        k = int((now_ms / 1000.0 - self.beat_t) // per)
+        tb = self.beat_t + k * per
+        if tb > self.last_tb + per / 2:
+            self.last_tb = tb
+            return (self.beat_n - 1 + k) % 4
+        return None
+
+
 class App:
     def __init__(self, board, cfg, source=None):
         self.board = board
@@ -559,6 +609,8 @@ class App:
         self.keep_clips = cfg.getboolean("storage", "keep_clips")
         self.web_port = cfg.getint("web", "port") if cfg.getboolean("web", "enabled") else 0
         self.engine = BeatEngine()
+        url = cfg.get("conductor", "url").strip()
+        self.feed = ConductorFeed(url) if url else None
         devs = find_capture_devices() if cfg.get("capture", "device") == "auto" else [cfg.get("capture", "device")]
         self.cap = Capture(devs, self.engine, cfg.getfloat("capture", "gain"), source=source)
         self.busy = threading.Lock()
@@ -579,6 +631,13 @@ class App:
         self.ip_t = 0.0
 
     # ---- helpers ---------------------------------------------------------------------------------
+    def clock(self):
+        """Where BPM and beats come from: the Beat Conductor (via Beat Hub) when it's live, else the mic."""
+        return self.feed if self.feed and self.feed.locked else self.engine
+
+    def bpm_source(self):
+        return "conductor" if self.feed and self.feed.locked else "mic"
+
     def led(self, r, g, b):
         if not self.use_led:
             return
@@ -602,7 +661,9 @@ class App:
 
     def state_json(self):
         tr = self.store.tracks()
-        return {"version": VERSION, "auto": self.auto, "bpm": round(self.engine.bpm, 1) if self.engine.locked else None,
+        c = self.clock()
+        return {"version": VERSION, "auto": self.auto, "bpm": round(c.bpm, 1) if c.locked else None,
+                "bpm_source": self.bpm_source(),
                 "level": round(self.engine.level, 4), "set": self.store.set_id, "count": len(tr),
                 "last": ({k: tr[-1].get(k) for k in ("artist", "title", "bpm", "clock")} if tr else None),
                 "pending": len(self.store.pending()), "matching": self.matching}
@@ -688,7 +749,7 @@ class App:
         ts = t_clip
         sid = self.store.set_id
         entry = {"ts": ts, "clock": datetime.fromtimestamp(ts).strftime("%H:%M:%S"),
-                 "bpm": round(self.engine.bpm, 1) if self.engine.locked else None,
+                 "bpm": round(self.clock().bpm, 1) if self.clock().locked else None,
                  "via": "tap" if manual else "auto"}
         try:
             result = audd_identify(wav, self.token, self.market)
@@ -820,8 +881,9 @@ class App:
                       np.roll(self.engine.scope_on, -self.engine.scope_pos).tolist()))
         next_in = max(0.0, self.next_auto - now) if self.auto and self.engine.level >= self.min_level else None
         st = self.store.started()
+        c = self.clock()
         s = {"auto": self.auto, "set_label": datetime.fromtimestamp(st).strftime("%H:%M") if st else "", "count": len(tr),
-             "bpm": self.engine.bpm, "locked": self.engine.locked, "beat": self.beat, "flash": flash,
+             "bpm": c.bpm, "locked": c.locked, "src": self.bpm_source(), "beat": self.beat, "flash": flash,
              "hue": self.hue, "level": self.engine.level, "scope": sc, "last": tr[-1] if tr else None,
              "next_in": next_in, "interval": self.interval, "matching": self.matching,
              "pending": len(self.store.pending()), "footer": self.footer()}
@@ -836,6 +898,8 @@ class App:
         self.board.on_button_release(self.on_release)
         self._push(self.scr.splash(VERSION))
         self.cap.start()
+        if self.feed:
+            self.feed.start()
         self.start_web()
         if not self.token:
             log.warning("no AudD token set; anonymous requests are very limited")
@@ -844,7 +908,8 @@ class App:
         led_off = 0.0
         while self.running:
             t0 = time.time()
-            b = self.engine.tick(t0 * 1000.0) if self.engine.locked else None
+            c = self.clock()
+            b = c.tick(t0 * 1000.0) if c.locked else None
             if b is not None:
                 self.beat = b
                 self.flash_t = t0
@@ -911,6 +976,7 @@ def render_preview(out_dir):
         "1_auto_downbeat": s.idle(base, 0.0),
         "2_auto_offbeat": s.idle(dict(base, beat=2, flash=0.1), 2.6),
         "3_manual_matching": s.idle(dict(base, auto=False, matching=True, beat=1, flash=0.3), 1.0),
+        "2b_conductor_link": s.idle(dict(base, src="conductor", beat=1, flash=0.2), 1.3),
         "4_manual_waiting": s.idle(dict(base, auto=False, locked=False, level=0.002, last=None, count=0,
                                         scope=[(0.0, False)] * 208, pending=2, footer="offline · IDs queue"), 0),
         "5_result": s.result(last, 8, False, 0),
