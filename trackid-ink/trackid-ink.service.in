@@ -1,0 +1,15 @@
+[Unit]
+Description=TrackID Ink (e-paper now-playing sign)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=__USER__
+WorkingDirectory=__APP_DIR__
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 __APP_DIR__/ink.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

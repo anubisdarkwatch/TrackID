@@ -1,0 +1,16 @@
+[Unit]
+Description=TrackID v2 setlist logger (Whisplay HAT)
+After=network-online.target sound.target whisplay-daemon.service
+Wants=network-online.target
+
+[Service]
+User=__USER__
+WorkingDirectory=__APP_DIR__
+Environment=WHISPLAY_RUNTIME=__HOME__/Whisplay/runtime
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 __APP_DIR__/trackid.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
