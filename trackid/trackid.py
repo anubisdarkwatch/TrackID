@@ -2,7 +2,7 @@
 """TrackID v2 - always-listening track ID + setlist logger for a Pi Zero 2W with the PiSugar Whisplay HAT.
 
 The mic is always recording into a 20 s ring buffer, so an ID uses the last 10 s instantly.
-Live BPM comes from the W10 Beat Conductor's beat engine (beat.py) running on the same audio.
+Live BPM comes from the Beat Commander's beat engine (beat.py) running on the same audio.
 
 Button:  tap        = identify the last 10 s now
          double tap = AUTO on/off (IDs on its own every few minutes while music plays)
@@ -541,7 +541,7 @@ def make_handler(app):
 # ================================================================== app
 
 class ConductorFeed:
-    """Live BPM + beat from a Beat Hub (the Beat Conductor's USB gateway), read from its /api/state."""
+    """Live BPM + beat from a Beat Hub (the Beat Commander's USB gateway), read from its /api/state."""
 
     def __init__(self, url):
         self.url = url.rstrip("/") + "/api/state"
@@ -632,7 +632,7 @@ class App:
 
     # ---- helpers ---------------------------------------------------------------------------------
     def clock(self):
-        """Where BPM and beats come from: the Beat Conductor (via Beat Hub) when it's live, else the mic."""
+        """Where BPM and beats come from: the Beat Commander (via Beat Hub) when it's live, else the mic."""
         return self.feed if self.feed and self.feed.locked else self.engine
 
     def bpm_source(self):

@@ -166,7 +166,7 @@ class Screens:
         bw = tw(d, bs, self.f_bpm)
         d.text(((W - bw) // 2 - 12, 40), bs, font=self.f_bpm, fill=col)
         d.text(((W + bw) // 2 - 6, 80), "BPM", font=self.f_bpmu, fill=DIM)
-        if s["locked"] and s.get("src") == "conductor":         # BPM comes from the Beat Conductor, not the mic
+        if s["locked"] and s.get("src") == "conductor":         # BPM comes from the Beat Commander, not the mic
             d.text(((W + bw) // 2 - 6, 62), "LINK", font=self.f_bpmu, fill=GREEN)
         # beat pips
         for i in range(4):

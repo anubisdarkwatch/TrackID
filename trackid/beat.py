@@ -1,4 +1,4 @@
-"""Beat engine from the W10 Beat Conductor, ported to Python/numpy (same maths, same constants).
+"""Beat engine from the Beat Commander, ported to Python/numpy (same maths, same constants).
 
 Onset strength (log-energy rise, kick band + full band) every 8 ms hop, tempo by autocorrelation
 over ~6 s, beat clock phase-locked to strong onsets. Feed it 16 kHz mono float samples (-1..1).

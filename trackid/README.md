@@ -8,7 +8,7 @@ timestamped setlist, ready to paste into YouTube chapters or Mixcloud.
   There's no waiting while it records.
 - **AUTO mode.** It identifies on its own every few minutes while music is playing, and stays quiet while the same track is
   still on. Misses aren't logged.
-- **Live BPM.** It runs the same beat engine as the W10 Beat Conductor on the mic, shows the BPM with a beat pulse, and saves the BPM
+- **Live BPM.** It runs the same beat engine as the Beat Commander on the mic, shows the BPM with a beat pulse, and saves the BPM
   with every track.
 - **Better start times.** AudD reports where in the song the clip landed, so TrackID works out when each track
   actually started, not just when you pressed.
@@ -66,8 +66,8 @@ For other gadgets, `http://trackid.local:8080/api/state` returns the live BPM, m
 
 After editing: `sudo systemctl restart trackid`
 
-## BPM from the Beat Conductor (optional)
-With a [Beat Gateway](https://github.com/anubisdarkwatch/W10-Beat-Conductor#beat-gateway-xiao-esp32-s3--beat-hub)
+## BPM from the Beat Commander (optional)
+With a [Beat Gateway](https://github.com/anubisdarkwatch/Beat-Commander#beat-gateway-xiao-esp32-s3--beat-hub)
 and Beat Hub running (on this Pi or another one), TrackID can take its BPM and beat from the conductor instead of
 guessing from the mic. Set `[conductor] url = http://localhost:8090` (or the other Pi's address) and restart.
 While the conductor is live, the screen shows **LINK** next to the BPM, and every logged track gets the conductor's

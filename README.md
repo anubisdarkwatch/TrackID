@@ -36,7 +36,7 @@ Full details: [`trackid/README.md`](trackid/README.md) and [`trackid-ink/README.
 ## Notes
 - Fingerprinting (via AudD) matches released recordings. Unreleased edits, mashups and live blends often won't match.
 - Each ID is one AudD request. AUTO mode makes one every 2½ minutes while music plays, so check your plan's quota.
-- The BPM uses the same beat engine as the [W10 Beat Conductor](https://github.com/anubisdarkwatch/W10-Beat-Conductor).
+- The BPM uses the same beat engine as the [Beat Commander](https://github.com/anubisdarkwatch/Beat-Commander).
 
 Built by Anubis Darkwatch with Claude. Code MIT (see `LICENSE`). The Waveshare driver files in `trackid-ink/waveshare_epd/`
 keep their own MIT-style notice.
