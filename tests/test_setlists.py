@@ -73,8 +73,8 @@ class SetlistTests(unittest.TestCase):
     def test_youtube_export_uses_intro_at_zero(self):
         self.store.add(self.track("Alpha", self.store.started() + 40))
         output = self.store.export_text("youtube")
-        self.assertTrue(output.startswith("00:00:00 Intro"))
-        self.assertIn("00:00:40 DJ Test - Alpha", output)
+        self.assertTrue(output.startswith("00:00 Intro"))
+        self.assertIn("00:40 DJ Test - Alpha", output)
 
 
 if __name__ == "__main__":
