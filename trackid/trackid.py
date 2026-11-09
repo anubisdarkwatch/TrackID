@@ -233,8 +233,12 @@ class SetStore:
             return buf.getvalue()
         start = self.started(sid)
         head = f"Tracklist - {datetime.fromtimestamp(start).strftime('%Y-%m-%d %H:%M') if start else sid}\n\n"
-        body = "".join(f"{i:02d}. [{fmt_hms(off, True)}] {e.get('artist', '?')} - {e.get('title', '?')}"
-                       f"{f'  ({e['bpm']:.0f} BPM)' if e.get('bpm') else ''}\n" for i, (off, e) in enumerate(rows, 1))
+        lines = []
+        for i, (off, e) in enumerate(rows, 1):
+            bpm = e.get("bpm")
+            bpm_suffix = f"  ({bpm:.0f} BPM)" if bpm is not None else ""
+            lines.append(f"{i:02d}. [{fmt_hms(off, True)}] {e.get('artist', '?')} - {e.get('title', '?')}{bpm_suffix}\n")
+        body = "".join(lines)
         return head + (body or "(no tracks yet)\n")
 
     def export(self, sid):
@@ -802,8 +806,10 @@ class App:
                                                         self.footer()), 3.5)
             return                                                # auto misses aren't logged: no noise
         dup = self.store.same_as_last(result, sid)
-        if not manual and (dup or self.store.seen_in_set(result, sid)):
-            return                                                # auto: still the same track, stay quiet
+        # AUTO should suppress only the currently playing track, not a song
+        # heard earlier in the set: DJs may return to an earlier recording.
+        if not manual and dup:
+            return                                                # still the same track
         self._apply_result(entry, result)
         entry["status"] = "duplicate" if dup else "matched"
         self.store.add(entry, sid)

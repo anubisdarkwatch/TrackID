@@ -1,0 +1,15 @@
+# Python generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+
+# Local configuration and runtime data
+config.ini
+trackid/config.ini
+trackid-ink/config.ini
+trackid/data/
+trackid-ink/data/
+
+# Development output
+*.log
