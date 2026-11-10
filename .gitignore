@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+trackid/config.ini
+trackid/data/
+trackid/library/
+trackid-ink/config.ini
