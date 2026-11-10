@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# TrackID v2 installer - Raspberry Pi OS Lite 64-bit on a Pi Zero 2W with the PiSugar Whisplay HAT
+# TrackID v2.2 installer - Raspberry Pi OS Lite 64-bit on a Pi Zero 2W with the PiSugar Whisplay HAT
 # Usage:  sudo bash install.sh
 set -euo pipefail
 
@@ -17,7 +17,7 @@ echo "==> TrackID v2 install for user $USER_NAME ($APP_DIR)"
 echo "==> Packages"
 apt-get update
 apt-get install -y git alsa-utils python3-pil python3-numpy python3-requests \
-  python3-spidev python3-libgpiod fonts-dejavu-core
+  python3-spidev python3-libgpiod fonts-dejavu-core ffmpeg
 
 echo "==> Whisplay driver"
 if [ ! -d "$HOME_DIR/Whisplay" ]; then
@@ -39,13 +39,13 @@ echo "==> Config"
 if [ ! -f "$APP_DIR/config.ini" ]; then
   cp "$APP_DIR/config.example.ini" "$APP_DIR/config.ini"
 else
-  # v1 -> v2: add the new sections, keep everything already set
-  for sec in auto; do
+  # older installs: add the new sections, keep everything already set
+  for sec in auto local export; do
     grep -q "^\[$sec\]" "$APP_DIR/config.ini" || \
       awk -v s="[$sec]" '$0==s{p=1;print "";print;next} /^\[/{p=0} p' "$APP_DIR/config.example.ini" >> "$APP_DIR/config.ini"
   done
 fi
-mkdir -p "$APP_DIR/data"
+mkdir -p "$APP_DIR/data" "$APP_DIR/library"
 chown -R "$USER_NAME:$USER_NAME" "$APP_DIR"
 
 echo "==> Service"

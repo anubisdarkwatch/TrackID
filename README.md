@@ -11,7 +11,7 @@ or Mixcloud. It also shows the live BPM.
 ## What's in here
 | Folder | What it is |
 |---|---|
-| [`trackid/`](trackid/) | **TrackID v2.** Tap to ID the last 10 s, AUTO mode, live BPM, offline queue, web page with Tracklist / YouTube chapters / Mixcloud / CSV exports. |
+| [`trackid/`](trackid/) | **TrackID v2.2.** Tap to ID the last 10 s, AUTO mode that IDs each new track, your own offline fingerprint library, live BPM, offline queue, editable web setlist with Tracklist / YouTube chapters / Mixcloud / CSV exports. |
 | [`trackid-ink/`](trackid-ink/) | **TrackID Ink.** A now-playing sign on a second Pi with a 2.13" e-paper (Waveshare HAT V4 or Adafruit bonnet). Reads TrackID over Wi-Fi. |
 | [`windows/`](windows/) | Double-click installers for Windows. They SSH into the Pi and set everything up. |
 
@@ -34,8 +34,9 @@ Updating later: `cd ~/TrackID && git pull`, then `sudo systemctl restart trackid
 Full details: [`trackid/README.md`](trackid/README.md) and [`trackid-ink/README.md`](trackid-ink/README.md).
 
 ## Notes
-- Fingerprinting (via AudD) matches released recordings. Unreleased edits, mashups and live blends often won't match.
-- Each ID is one AudD request. AUTO mode makes one every 2½ minutes while music plays, so check your plan's quota.
+- AudD matches released recordings. For your own edits and unreleased tracks, add them to the local library
+  (`trackid/library/`): they match offline and cost nothing. Anything still unknown is logged as `ID - ID` for you to fill in.
+- AUTO listens for track changes and makes about one AudD request per new track (capped per hour), so check your plan's quota.
 - The BPM uses the same beat engine as [Beat Commander](https://github.com/anubisdarkwatch/Beat-Commander).
 
 Built by Anubis Darkwatch with Claude. Code MIT (see `LICENSE`). The Waveshare driver files in `trackid-ink/waveshare_epd/`

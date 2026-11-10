@@ -193,6 +193,20 @@ class Screens:
         if s["matching"]:
             dots = "." * (1 + int(t * 3) % 3)
             d.text((16, y), "MATCHING" + dots, font=self.f_hdr, fill=AMBER)
+        elif s["auto"] and s.get("watch"):
+            w = s["watch"]
+            if w["id_in"] is not None:                          # change found: ID once the clip is all new track
+                d.text((16, y), f"NEW TRACK · ID IN {int(w['id_in']) + 1}s", font=self.f_hdr, fill=AMBER)
+            else:
+                d.text((16, y), "AUTO · WATCHING", font=self.f_hdr, fill=GREEN)
+                # how different the last seconds sound from the track so far; fires past the tick mark
+                x0, x1 = 132, W - 16
+                frac = max(0.0, min(1.0, w["nov"] / max(1e-6, w["thr"]) / 1.5))
+                tick = x0 + int((x1 - x0) / 1.5)
+                d.rounded_rectangle((x0, y + 4, x1, y + 9), radius=3, fill=FAINT)
+                d.rounded_rectangle((x0, y + 4, x0 + int((x1 - x0) * frac), y + 9), radius=3,
+                                    fill=AMBER if frac >= 1 / 1.5 else GREEN)
+                d.line((tick, y + 1, tick, y + 12), fill=DIM)
         elif s["auto"] and s["next_in"] is not None:
             frac = 1 - max(0.0, min(1.0, s["next_in"] / max(1, s["interval"])))
             d.text((16, y), f"NEXT ID {int(s['next_in']) // 60}:{int(s['next_in']) % 60:02d}", font=self.f_hdr, fill=GREEN)
