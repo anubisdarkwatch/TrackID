@@ -98,6 +98,9 @@ format. The files also live in `~/trackid/data/sets/`.
 
 Unknown tracks appear in the exports as `ID - ID` so the timeline stays complete (`[export] include_unknown`).
 
+Gadgets can also press the button: `POST /api/identify` (identify now) and `POST /api/auto` (toggle, or
+`{"on": true}`), with the header `X-TrackID: 1`. TrackID Ink's touch screen uses these.
+
 For other gadgets, `http://trackid.local:8080/api/state` returns the live BPM, mode and last track as JSON. In change
 mode it also includes `change.novelty` (how different the music sounds right now) for tuning `sensitivity`.
 
@@ -121,6 +124,7 @@ mode it also includes `change.novelty` (how different the music sounds right now
 | export | include_unknown / unknown_label | true / ID - ID | unidentified tracks in exports |
 | display | brightness / led / led_beat / fps | 70 / on / on / 12 | |
 | web | enabled / port / edit | on / 8080 / on | LAN only. `edit = false` makes the page read-only |
+| web | remote | on | let TrackID Ink's touch screen (or other gadgets) identify / toggle AUTO |
 | conductor | url | none | Beat Hub address, e.g. `http://localhost:8090` (see below) |
 
 After editing: `sudo systemctl restart trackid`

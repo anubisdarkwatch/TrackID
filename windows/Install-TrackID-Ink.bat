@@ -10,7 +10,7 @@ set PIHOST=trackid-ink.local
 set /p PIHOST=Pi address [press Enter for trackid-ink.local]: 
 if "%PIHOST%"=="" set PIHOST=trackid-ink.local
 set PANEL=waveshare
-set /p PANEL=E-paper: type waveshare or adafruit [Enter = waveshare]: 
+set /p PANEL=E-paper: type waveshare, touch (Waveshare Touch e-Paper HAT) or adafruit [Enter = waveshare]: 
 if "%PANEL%"=="" set PANEL=waveshare
 set TIDURL=
 set /p TIDURL=TrackID address, e.g. http://192.168.1.42:8080 [Enter = http://trackid.local:8080]: 

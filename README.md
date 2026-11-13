@@ -12,7 +12,7 @@ or Mixcloud. It also shows the live BPM.
 | Folder | What it is |
 |---|---|
 | [`trackid/`](trackid/) | **TrackID v2.2.** Tap to ID the last 10 s, AUTO mode that IDs each new track, your own offline fingerprint library, live BPM, offline queue, editable web setlist with Tracklist / YouTube chapters / Mixcloud / CSV exports. |
-| [`trackid-ink/`](trackid-ink/) | **TrackID Ink.** A now-playing sign on a second Pi with a 2.13" e-paper (Waveshare HAT V4 or Adafruit bonnet). Reads TrackID over Wi-Fi. |
+| [`trackid-ink/`](trackid-ink/) | **TrackID Ink.** A now-playing sign on a second Pi with a 2.13" e-paper (Waveshare HAT V4, Waveshare Touch e-Paper HAT, or Adafruit bonnet). Reads TrackID over Wi-Fi. With the Touch HAT it's also a remote: tap to ID, hold for AUTO, swipe for the setlist. |
 | [`windows/`](windows/) | Double-click installers for Windows. They SSH into the Pi and set everything up. |
 
 ## Quick start
