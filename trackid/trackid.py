@@ -63,7 +63,7 @@ DEFAULT_CONFIG = {
               "min_score": "12", "rescan": "10"},
     "export": {"include_unknown": "true", "unknown_label": "ID - ID"},
     "display": {"brightness": "70", "led": "true", "led_beat": "true", "fps": "12"},
-    "web": {"enabled": "true", "port": "8080", "edit": "true"},
+    "web": {"enabled": "true", "port": "8080", "edit": "true", "remote": "true"},
     "storage": {"data_dir": "data", "keep_clips": "false"},
     "conductor": {"url": ""},
 }
@@ -752,11 +752,8 @@ def make_handler(app):
 
         def do_POST(self):
             u = urlparse(self.path)
-            if not app.web_edit:
-                self._json(403, {"ok": False, "error": "editing is turned off ([web] edit = false)"})
-                return
             # A custom header can't be sent cross-site without a CORS preflight (which we never allow), so a
-            # random web page in your browser can't post edits to the Pi.
+            # random web page in your browser can't post to the Pi.
             if self.headers.get("X-TrackID") != "1":
                 self._json(403, {"ok": False, "error": "missing X-TrackID header"})
                 return
@@ -765,6 +762,25 @@ def make_handler(app):
                 d = json.loads(self.rfile.read(min(n, 65536)) or b"{}") if n else {}
             except ValueError:
                 self._json(400, {"ok": False, "error": "bad JSON"})
+                return
+            if u.path in ("/api/identify", "/api/auto"):
+                # remote control (TrackID Ink touch screen, other gadgets): same as the button
+                if not app.web_remote:
+                    self._json(403, {"ok": False, "error": "remote control is turned off ([web] remote = false)"})
+                    return
+                if u.path == "/api/identify":
+                    started = not app.busy.locked()
+                    if started:
+                        threading.Thread(target=app.identify, kwargs={"manual": True}, daemon=True).start()
+                    self._json(200, {"ok": True, "started": started})
+                else:
+                    want = d.get("on")
+                    if want is None or bool(want) != app.auto:
+                        app.toggle_auto()
+                    self._json(200, {"ok": True, "auto": app.auto})
+                return
+            if not app.web_edit:
+                self._json(403, {"ok": False, "error": "editing is turned off ([web] edit = false)"})
                 return
             sid = d.get("set") or store.set_id
             if sid not in store.list_sets():
@@ -905,6 +921,7 @@ class App:
         self.keep_clips = cfg.getboolean("storage", "keep_clips")
         self.web_port = cfg.getint("web", "port") if cfg.getboolean("web", "enabled") else 0
         self.web_edit = cfg.getboolean("web", "edit")
+        self.web_remote = cfg.getboolean("web", "remote")
         self.engine = BeatEngine()
         url = cfg.get("conductor", "url").strip()
         self.feed = ConductorFeed(url) if url else None
